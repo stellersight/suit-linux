@@ -18,6 +18,7 @@ swap a file out from under the reader.
 
 import json
 import os
+import posixpath
 import stat
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,10 +66,70 @@ def _check_owner_and_mode(st: os.stat_result, what: str) -> None:
         raise PolicyError(f"{what} must not be writable by group or others (mode {oct(stat.S_IMODE(st.st_mode))})")
 
 
+def check_trusted_path(path: str, lstat=os.lstat) -> None:
+    """Requires every component of an absolute path to be root-controlled.
+
+    O_NOFOLLOW only covers the final component. A symlink, or a directory an
+    unprivileged user can write, anywhere above it would let that user
+    substitute what is read or executed. So each component from / down is
+    checked: no symlinks, owned by root, not writable by group or others.
+    """
+    if not path.startswith("/"):
+        raise PolicyError(f"{path} is not absolute")
+    current = "/"
+    parts = [p for p in path.split("/") if p]
+    for i, part in enumerate([""] + parts):
+        if part:
+            current = posixpath.join(current, part)
+        try:
+            st = lstat(current)
+        except OSError as e:
+            raise PolicyError(f"cannot inspect {current}: {e}") from e
+        if stat.S_ISLNK(st.st_mode):
+            raise PolicyError(f"{current} is a symlink; trusted paths must not contain symlinks")
+        _check_owner_and_mode(st, current)
+
+
+def check_executable(path: str, lstat=os.lstat, read_head=None) -> None:
+    """Requires a profile's executable to be a root-controlled regular file.
+
+    A fixed argument list does not make a program safe to run as root if an
+    unprivileged user can replace the program, a directory above it, or (for
+    a script) its interpreter.
+    """
+    st = lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        # Distributions routinely symlink executables (python3 -> python3.12).
+        # Acceptable only if the link itself is root's, in a trusted
+        # directory, and its target passes the same checks.
+        check_trusted_path(posixpath.dirname(path), lstat)
+        if st.st_uid != 0:
+            raise PolicyError(f"{path} is a symlink not owned by root")
+        check_executable(os.path.realpath(path), lstat, read_head)
+        return
+    check_trusted_path(path, lstat)
+    if not stat.S_ISREG(st.st_mode):
+        raise PolicyError(f"{path} is not a regular file")
+    if not st.st_mode & stat.S_IXUSR:
+        raise PolicyError(f"{path} is not executable")
+
+    if read_head is None:
+        def read_head(p):
+            with open(p, "rb") as f:
+                return f.read(256)
+    head = read_head(path)
+    if head.startswith(b"#!"):
+        line = head[2:].split(b"\n", 1)[0].decode("utf-8", "replace").strip()
+        interpreter = line.split()[0] if line else ""
+        if os.path.basename(interpreter) in FORBIDDEN_EXECUTABLES or os.path.basename(interpreter) == "env":
+            raise PolicyError(f"{path} is a script run by {interpreter}, which can run arbitrary code from its environment")
+        check_executable(interpreter, lstat, read_head)
+
+
 def read_protected_json(path: Path, enforce_ownership: bool = True) -> dict:
-    """Reads a JSON file only if it, and its directory, are root-controlled."""
+    """Reads a JSON file only if it, and every directory above it, are root-controlled."""
     if enforce_ownership:
-        _check_owner_and_mode(os.lstat(path.parent), f"directory {path.parent}")
+        check_trusted_path(str(path.parent))
 
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
     try:
@@ -141,9 +202,27 @@ def load(policy_dir: Path = POLICY_DIR, enforce_ownership: bool = True) -> Tuple
         The actions, the eligibility map, and the set of approver UIDs.
     """
     profiles = parse_profiles(read_protected_json(policy_dir / "profiles.json", enforce_ownership))
+    if enforce_ownership:
+        for action in profiles.values():
+            try:
+                check_executable(action.argv[0])
+            except (PolicyError, OSError) as e:
+                raise PolicyError(f"profiles: {action.name}: {e}") from e
     elig_data = read_protected_json(policy_dir / "eligibility.json", enforce_ownership)
     eligibility = parse_eligibility(elig_data, profiles)
     approvers = elig_data.get("approvers") or []
     if not all(isinstance(a, int) and a >= 0 for a in approvers):
         raise PolicyError("eligibility: approvers must be a list of uids")
     return profiles, eligibility, frozenset(approvers)
+
+
+def verify_installation(module_files, interpreter: str) -> None:
+    """Refuses to run unless the broker's own code path is root-controlled.
+
+    The broker is only as trustworthy as the files it executes: its Python
+    interpreter and every module it imported. Install-time ownership can
+    drift, so it is checked on every run.
+    """
+    check_executable(interpreter)
+    for path in module_files:
+        check_trusted_path(os.path.realpath(path))

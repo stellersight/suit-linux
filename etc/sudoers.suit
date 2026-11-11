@@ -5,4 +5,4 @@
 Defaults!/usr/local/sbin/suit-exec env_reset
 Defaults!/usr/local/sbin/suit env_reset
 %suit-eligible  ALL=(root) NOPASSWD: /usr/local/sbin/suit-exec, /usr/local/sbin/suit request *, /usr/local/sbin/suit revoke *, /usr/local/sbin/suit status
-%suit-approvers ALL=(root) /usr/local/sbin/suit approve *, /usr/local/sbin/suit deny *, /usr/local/sbin/suit revoke *, /usr/local/sbin/suit suspend *, /usr/local/sbin/suit resume *, /usr/local/sbin/suit status, /usr/local/sbin/suit verify
+%suit-approvers ALL=(root) /usr/local/sbin/suit approve *, /usr/local/sbin/suit deny *, /usr/local/sbin/suit revoke *, /usr/local/sbin/suit suspend *, /usr/local/sbin/suit status, /usr/local/sbin/suit verify

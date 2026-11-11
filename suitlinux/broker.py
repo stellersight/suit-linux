@@ -99,6 +99,14 @@ def exec_action(action: policy.Action) -> None:  # pragma: no cover - replaces t
     os.execve(action.argv[0], list(action.argv), dict(SAFE_ENV))
 
 
+def verify_own_installation() -> None:  # pragma: no cover - needs a real install
+    import suitlinux
+    files = [m.__file__ for name, m in list(sys.modules.items())
+             if name.startswith("suitlinux") and getattr(m, "__file__", None)]
+    files.append(os.path.dirname(suitlinux.__file__))
+    policy.verify_installation(files, sys.executable)
+
+
 def main(argv=None) -> int:  # pragma: no cover - exercised through tests of its parts
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1:
@@ -106,6 +114,7 @@ def main(argv=None) -> int:  # pragma: no cover - exercised through tests of its
         return 2
     try:
         uid = caller_uid()
+        verify_own_installation()
         actions, eligibility, _ = policy.load()
         store = Store(DEFAULT_DB)
         action = authorize(argv[0], uid, store, actions, eligibility, clock.boot_id(), clock.boot_seconds())

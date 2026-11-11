@@ -20,7 +20,7 @@ import sys
 from typing import List
 
 from suitlinux import clock, policy
-from suitlinux.broker import Denied, caller_uid
+from suitlinux.broker import Denied, caller_uid, verify_own_installation
 from suitlinux.store import DEFAULT_DB, RISK_NORMAL, RISK_SUSPENDED, Store, StoreError
 
 BROKER_PATH = "/usr/local/sbin/suit-exec"
@@ -73,8 +73,13 @@ def cmd_revoke(args, uid, store, actions, eligibility, approvers) -> int:
 
 
 def cmd_risk(args, uid, store, actions, eligibility, approvers, level) -> int:
-    if uid not in approvers and uid != 0:
-        raise Denied("only an approver or root can change the risk level")
+    # Suspending is cheap and safe, so any approver may do it. Lifting a
+    # suspension reopens the host, so one compromised approver must not be
+    # able to; it is reserved to root acting directly as recovery authority.
+    if level == RISK_SUSPENDED and uid not in approvers and uid != 0:
+        raise Denied("only an approver or root can suspend")
+    if level == RISK_NORMAL and uid != 0:
+        raise Denied("only root, as recovery authority, can resume after a suspension")
     closed = store.set_risk(level, uid, args.reason, _boot_or_none())
     print(f"risk level {level}" + (f"; {closed} request(s) closed" if closed else ""))
     return 0
@@ -82,6 +87,8 @@ def cmd_risk(args, uid, store, actions, eligibility, approvers, level) -> int:
 
 def cmd_status(args, uid, store, actions, eligibility, approvers) -> int:
     rows = store.list_requests(["pending", "active"])
+    if uid not in approvers and uid != 0:
+        rows = [r for r in rows if r["uid"] == uid]
     print(json.dumps({
         "risk_level": store.risk_level(),
         "open_requests": [dict(r) for r in rows],
@@ -166,6 +173,7 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     try:
         uid = caller_uid()
+        verify_own_installation()
         actions, eligibility, approvers = policy.load()
         store = Store(DEFAULT_DB)
         handlers = {

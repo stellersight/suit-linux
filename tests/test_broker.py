@@ -232,3 +232,74 @@ User alice may run the following commands on host:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeFS:
+    """A minimal lstat for exercising path-integrity checks on any platform."""
+
+    def __init__(self, entries):
+        import stat as st
+        self.st = st
+        self.entries = entries  # path -> (kind, uid, mode)
+
+    def lstat(self, path):
+        from types import SimpleNamespace
+        if path not in self.entries:
+            raise FileNotFoundError(path)
+        kind, uid, mode = self.entries[path]
+        kinds = {"dir": self.st.S_IFDIR, "file": self.st.S_IFREG, "link": self.st.S_IFLNK}
+        return SimpleNamespace(st_mode=kinds[kind] | mode, st_uid=uid)
+
+
+ROOT_TREE = {
+    "/": ("dir", 0, 0o755), "/usr": ("dir", 0, 0o755), "/usr/bin": ("dir", 0, 0o755),
+    "/usr/bin/systemctl": ("file", 0, 0o755),
+}
+
+
+class TestExecutableIntegrity(unittest.TestCase):
+
+    def _check(self, entries, path, head=b"\x7fELF"):
+        fs = FakeFS(dict(ROOT_TREE, **entries))
+        policy.check_executable(path, fs.lstat, lambda p: head)
+
+    def test_root_owned_binary_passes(self):
+        self._check({}, "/usr/bin/systemctl")
+
+    def test_binary_owned_by_user_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self._check({"/usr/bin/systemctl": ("file", 1001, 0o755)}, "/usr/bin/systemctl")
+
+    def test_group_writable_binary_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self._check({"/usr/bin/systemctl": ("file", 0, 0o775)}, "/usr/bin/systemctl")
+
+    def test_writable_parent_directory_is_refused(self):
+        entries = {"/opt": ("dir", 0, 0o777), "/opt/tool": ("file", 0, 0o755)}
+        with self.assertRaises(policy.PolicyError):
+            self._check(entries, "/opt/tool")
+
+    def test_parent_directory_owned_by_user_is_refused(self):
+        entries = {"/opt": ("dir", 1001, 0o755), "/opt/tool": ("file", 0, 0o755)}
+        with self.assertRaises(policy.PolicyError):
+            self._check(entries, "/opt/tool")
+
+    def test_symlinked_directory_component_is_refused(self):
+        # O_NOFOLLOW alone covers only the last component.
+        entries = {"/opt": ("link", 0, 0o777), "/opt/tool": ("file", 0, 0o755)}
+        with self.assertRaises(policy.PolicyError):
+            policy.check_trusted_path("/opt/tool", FakeFS(dict(ROOT_TREE, **entries)).lstat)
+
+    def test_script_with_unsafe_interpreter_is_refused(self):
+        entries = {"/usr/bin/helper": ("file", 0, 0o755)}
+        with self.assertRaises(policy.PolicyError):
+            self._check(entries, "/usr/bin/helper", head=b"#!/bin/bash\necho hi\n")
+
+    def test_script_via_env_is_refused(self):
+        entries = {"/usr/bin/helper": ("file", 0, 0o755)}
+        with self.assertRaises(policy.PolicyError):
+            self._check(entries, "/usr/bin/helper", head=b"#!/usr/bin/env tool\n")
+
+    def test_non_executable_file_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self._check({"/usr/bin/systemctl": ("file", 0, 0o644)}, "/usr/bin/systemctl")
