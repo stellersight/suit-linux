@@ -1,0 +1,7 @@
+{
+  "schema": "suit.eligibility.v1",
+  "approvers": [2000],
+  "users": [
+    {"uid": 1001, "actions": ["service.restart.nginx", "service.status.nginx"], "max_duration_seconds": 1800}
+  ]
+}

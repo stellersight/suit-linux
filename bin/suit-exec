@@ -1,0 +1,5 @@
+#!/usr/bin/python3 -I
+import sys
+sys.path.insert(0, "/opt/suit")
+from suitlinux.broker import main
+sys.exit(main())

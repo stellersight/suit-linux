@@ -1,0 +1,7 @@
+#!/usr/bin/python3 -I
+# -I: ignore PYTHON* environment variables and the user site directory, so a
+# caller cannot steer which code this root process imports.
+import sys
+sys.path.insert(0, "/opt/suit")
+from suitlinux.cli import main
+sys.exit(main())

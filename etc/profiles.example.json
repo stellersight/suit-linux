@@ -1,0 +1,13 @@
+{
+  "schema": "suit.profiles.v1",
+  "actions": {
+    "service.restart.nginx": {
+      "argv": ["/usr/bin/systemctl", "--no-pager", "restart", "nginx.service"],
+      "description": "Restart nginx"
+    },
+    "service.status.nginx": {
+      "argv": ["/usr/bin/systemctl", "--no-pager", "--lines=50", "status", "nginx.service"],
+      "description": "Show nginx status and its last 50 log lines"
+    }
+  }
+}
