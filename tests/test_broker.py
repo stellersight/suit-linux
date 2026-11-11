@@ -325,3 +325,14 @@ class TestInputValidation(StoreCase):
                      ["request", "a", "--minutes", "5", "--reason", "r", "approve"]):
             with self.assertRaises(SystemExit):
                 parser.parse_args(argv)
+
+
+class TestCagInv3(unittest.TestCase):
+
+    def test_eligibility_above_four_hours_is_refused(self):
+        actions = policy.parse_profiles(PROFILES)
+        with self.assertRaises(policy.PolicyError):
+            policy.parse_eligibility({"schema": "suit.eligibility.v1", "users": [
+                {"uid": 5, "actions": ["service.restart.nginx"], "max_duration_seconds": 4 * 3600 + 1}]}, actions)
+        policy.parse_eligibility({"schema": "suit.eligibility.v1", "users": [
+            {"uid": 5, "actions": ["service.restart.nginx"], "max_duration_seconds": 4 * 3600}]}, actions)

@@ -28,6 +28,10 @@ POLICY_DIR = Path("/etc/suit")
 
 ACTION_NAME_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789.-_")
 
+# CAG-INV-3: no grant on any SUIT platform may exceed four hours. Policy can
+# only set a lower limit.
+MAX_GRANT_SECONDS = 4 * 3600
+
 # Executables that interpret arbitrary input, open pagers or editors, or run
 # sub-commands. An action whose argv[0] is one of these can be steered into a
 # root shell however its arguments are fixed, so the loader refuses it.
@@ -189,8 +193,8 @@ def parse_eligibility(data: dict, actions: Dict[str, Action]) -> Dict[int, Eligi
         if unknown:
             raise PolicyError(f"eligibility: uid {uid}: unknown actions {unknown}")
         max_seconds = entry.get("max_duration_seconds")
-        if not isinstance(max_seconds, int) or not 60 <= max_seconds <= 8 * 3600:
-            raise PolicyError(f"eligibility: uid {uid}: max_duration_seconds must be 60..28800")
+        if not isinstance(max_seconds, int) or not 60 <= max_seconds <= MAX_GRANT_SECONDS:
+            raise PolicyError(f"eligibility: uid {uid}: max_duration_seconds must be 60..{MAX_GRANT_SECONDS} (CAG-INV-3)")
         result[uid] = Eligibility(uid=uid, actions=frozenset(names), max_duration_seconds=max_seconds)
     return result
 
