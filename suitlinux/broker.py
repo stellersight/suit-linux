@@ -96,6 +96,12 @@ def exec_action(action: policy.Action) -> None:  # pragma: no cover - replaces t
     except (ValueError, OSError):
         max_fd = 1024
     os.closerange(3, max_fd)
+    # A fixed argv does not make a program safe if the caller can still feed
+    # it input. Standard input is replaced with /dev/null; output and errors
+    # stay connected so the caller sees the result.
+    devnull = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(devnull, 0)
+    os.close(devnull)
     os.execve(action.argv[0], list(action.argv), dict(SAFE_ENV))
 
 

@@ -37,6 +37,8 @@ def cmd_request(args, uid, store, actions, eligibility, approvers) -> int:
     elig = eligibility.get(uid)
     if elig is None or args.action not in elig.actions:
         raise Denied(f"uid {uid} is not eligible for {args.action}")
+    if args.minutes < 1:
+        raise Denied("--minutes must be at least 1")
     seconds = args.minutes * 60
     if seconds > elig.max_duration_seconds:
         raise Denied(f"the maximum for this action is {elig.max_duration_seconds // 60} minutes")
@@ -157,8 +159,11 @@ def cmd_doctor(args, uid, store, actions, eligibility, approvers) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="suit", description="SUIT for Linux: just-in-time privileged operations")
-    sub = p.add_subparsers(dest="command", required=True)
+    # Strict parsing: no abbreviated options, no @file expansion, and unknown
+    # arguments are errors (parse_args, never parse_known_args).
+    p = argparse.ArgumentParser(prog="suit", description="SUIT for Linux: just-in-time privileged operations",
+                                allow_abbrev=False, fromfile_prefix_chars=None)
+    sub = p.add_subparsers(dest="command", required=True, parser_class=lambda **kw: argparse.ArgumentParser(allow_abbrev=False, **kw))
     r = sub.add_parser("request"); r.add_argument("action"); r.add_argument("--minutes", type=int, required=True); r.add_argument("--reason", required=True)
     a = sub.add_parser("approve"); a.add_argument("request")
     d = sub.add_parser("deny"); d.add_argument("request"); d.add_argument("--reason", required=True)

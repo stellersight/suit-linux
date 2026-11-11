@@ -68,6 +68,24 @@ class StoreError(RuntimeError):
     """Raised when an operation is refused. The message is safe to show the caller."""
 
 
+MAX_REASON = 500
+
+
+def check_reason(reason: str) -> str:
+    """Validates free text that will be stored and later shown on terminals.
+
+    Control characters are refused rather than escaped, so a stored reason can
+    never rewrite an approver's terminal when listed.
+    """
+    if not reason or not reason.strip():
+        raise StoreError("a reason is required")
+    if len(reason) > MAX_REASON:
+        raise StoreError(f"the reason is limited to {MAX_REASON} characters")
+    if any(ord(c) < 32 or 127 <= ord(c) < 160 for c in reason):
+        raise StoreError("the reason must not contain control characters")
+    return reason.strip()
+
+
 def _canonical(record: Dict[str, Any]) -> bytes:
     return json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
@@ -164,8 +182,7 @@ class Store:
         """
         if level not in (RISK_NORMAL, RISK_SUSPENDED):
             raise StoreError(f"unknown risk level {level}")
-        if not reason.strip():
-            raise StoreError("a reason is required")
+        reason = check_reason(reason)
         with self.transaction() as db:
             db.execute(
                 "INSERT INTO risk_state (singleton, level, set_by, reason, set_wall) VALUES (1, ?, ?, ?, ?) "
@@ -187,8 +204,7 @@ class Store:
     # -- requests and grants -----------------------------------------------------
 
     def create_request(self, uid: int, action: str, reason: str, duration_s: int, boot: Optional[str]) -> str:
-        if not reason.strip():
-            raise StoreError("a reason is required")
+        reason = check_reason(reason)
         rid = "r-" + uuid.uuid4().hex[:12]
         with self.transaction() as db:
             if self.risk_level(db) == RISK_SUSPENDED:
@@ -224,6 +240,7 @@ class Store:
             return db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
 
     def deny(self, rid: str, approver_uid: int, reason: str, boot: Optional[str]) -> None:
+        reason = check_reason(reason)
         with self.transaction() as db:
             req = db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
             if req is None or req["state"] != "pending":
@@ -234,6 +251,7 @@ class Store:
                                {"request": rid, "reason": reason})
 
     def revoke(self, rid: str, by_uid: int, reason: str, boot: Optional[str]) -> None:
+        reason = check_reason(reason)
         with self.transaction() as db:
             req = db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
             if req is None or req["state"] not in ("active", "pending"):

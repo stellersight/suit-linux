@@ -303,3 +303,25 @@ class TestExecutableIntegrity(unittest.TestCase):
     def test_non_executable_file_is_refused(self):
         with self.assertRaises(policy.PolicyError):
             self._check({"/usr/bin/systemctl": ("file", 0, 0o644)}, "/usr/bin/systemctl")
+
+
+class TestInputValidation(StoreCase):
+
+    def test_control_characters_in_reason_are_refused(self):
+        # A stored reason is later printed on an approver's terminal.
+        for bad in ("INC-1\x1b[2J", "line\nbreak", "bell\x07", "c1\x9b31m"):
+            with self.assertRaises(StoreError):
+                self.store.create_request(1001, "service.restart.nginx", bad, 600, BOOT)
+
+    def test_overlong_reason_is_refused(self):
+        with self.assertRaises(StoreError):
+            self.store.create_request(1001, "service.restart.nginx", "x" * 501, 600, BOOT)
+
+    def test_parser_rejects_abbreviations_and_unknown_arguments(self):
+        from suitlinux.cli import build_parser
+        parser = build_parser()
+        for argv in (["request", "a", "--min", "5", "--reason", "r"],
+                     ["request", "a", "--minutes", "5", "--reason", "r", "--extra"],
+                     ["request", "a", "--minutes", "5", "--reason", "r", "approve"]):
+            with self.assertRaises(SystemExit):
+                parser.parse_args(argv)
