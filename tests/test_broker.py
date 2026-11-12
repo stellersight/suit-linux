@@ -336,3 +336,31 @@ class TestCagInv3(unittest.TestCase):
                 {"uid": 5, "actions": ["service.restart.nginx"], "max_duration_seconds": 4 * 3600 + 1}]}, actions)
         policy.parse_eligibility({"schema": "suit.eligibility.v1", "users": [
             {"uid": 5, "actions": ["service.restart.nginx"], "max_duration_seconds": 4 * 3600}]}, actions)
+
+
+class TestActionAvailability(StoreCase):
+
+    def test_missing_executable_disables_only_that_action(self):
+        actions = policy.parse_profiles(PROFILES)
+
+        def only_restart_missing(path):
+            if path == "/usr/bin/systemctl" and only_restart_missing.calls == 0:
+                only_restart_missing.calls += 1
+                raise FileNotFoundError(path)
+            only_restart_missing.calls += 1
+        only_restart_missing.calls = 0
+
+        checked = policy.apply_executable_checks(actions, only_restart_missing)
+        unavailable = [a.name for a in checked.values() if a.unavailable]
+        self.assertEqual(1, len(unavailable))
+        self.assertEqual(len(actions) - 1, len([a for a in checked.values() if not a.unavailable]))
+
+    def test_unavailable_action_is_refused_by_the_broker(self):
+        actions = policy.parse_profiles(PROFILES)
+        checked = policy.apply_executable_checks(actions, lambda p: (_ for _ in ()).throw(FileNotFoundError(p)))
+        elig = policy.parse_eligibility(ELIGIBILITY, checked)
+        rid = self.store.create_request(1001, "service.restart.nginx", "INC-1", 600, BOOT)
+        self.store.approve(rid, 2000, BOOT, 100.0)
+        with self.assertRaises(Denied) as ctx:
+            authorize("service.restart.nginx", 1001, self.store, checked, elig, BOOT, 150.0)
+        self.assertIn("unavailable", str(ctx.exception))

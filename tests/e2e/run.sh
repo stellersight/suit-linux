@@ -66,20 +66,25 @@ chmod o+w /opt/suit/suitlinux/store.py
 expect_fail "world-writable broker module refused" "as_alice 'sudo -n /usr/local/sbin/suit-exec proof.touch'"
 chmod o-w /opt/suit/suitlinux/store.py
 
-# 9. doctor finds sudo rights that bypass SUIT.
-expect_ok "doctor clean with SUIT-only rules" "/usr/local/sbin/suit doctor 2>&1"
+# 9. A profile whose executable is absent disables only that action.
+expect_fail "missing-executable action refused at request" "as_alice 'sudo -n /usr/local/sbin/suit request proof.missing --minutes 5 --reason x'"
+out=$(/usr/local/sbin/suit doctor 2>&1)
+echo "$out" | grep -q "proof.missing is unavailable" && ok "doctor reports the unavailable action" || bad "doctor reports the unavailable action" "$out"
+
+# 10. doctor finds sudo rights that bypass SUIT.
+echo "$out" | grep -q "outside SUIT" && bad "doctor clean with SUIT-only rules" "$out" || ok "doctor clean with SUIT-only rules"
 echo 'alice ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/zz-bypass; chmod 0440 /etc/sudoers.d/zz-bypass
 out=$(/usr/local/sbin/suit doctor 2>&1); rc=$?
 [ $rc -ne 0 ] && echo "$out" | grep -q "outside SUIT" && ok "doctor reports a bypassing sudo rule" || bad "doctor reports a bypassing sudo rule" "$out"
 rm -f /etc/sudoers.d/zz-bypass
 
-# 10. Expiry needs no cleanup: wait past a one-minute grant.
+# 11. Expiry needs no cleanup: wait past a one-minute grant.
 RID5=$(request proof.whoami 1); as_bob "/usr/local/sbin/suit approve $RID5" >/dev/null
 expect_ok "short grant works before deadline" "as_alice 'sudo -n /usr/local/sbin/suit-exec proof.whoami'"
 echo "      waiting 62s for the grant to expire on CLOCK_BOOTTIME..."; sleep 62
 expect_fail "expired grant refused without any cleanup job" "as_alice 'sudo -n /usr/local/sbin/suit-exec proof.whoami'"
 
-# 11. The audit chain verifies, and detects tampering.
+# 12. The audit chain verifies, and detects tampering.
 expect_ok "audit chain verifies" "/usr/local/sbin/suit verify 2>&1"
 changed=$(python3 -c "
 import sqlite3; db = sqlite3.connect('/var/lib/suit/state.db')

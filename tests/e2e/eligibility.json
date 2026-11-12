@@ -2,6 +2,6 @@
   "schema": "suit.eligibility.v1",
   "approvers": [2000],
   "users": [
-    {"uid": 1001, "actions": ["proof.whoami", "proof.touch", "proof.stdin"], "max_duration_seconds": 3600}
+    {"uid": 1001, "actions": ["proof.whoami", "proof.touch", "proof.stdin", "proof.missing"], "max_duration_seconds": 3600}
   ]
 }

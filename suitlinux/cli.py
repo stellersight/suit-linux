@@ -37,6 +37,8 @@ def cmd_request(args, uid, store, actions, eligibility, approvers) -> int:
     elig = eligibility.get(uid)
     if elig is None or args.action not in elig.actions:
         raise Denied(f"uid {uid} is not eligible for {args.action}")
+    if actions[args.action].unavailable:
+        raise Denied(f"{args.action} is unavailable on this host: {actions[args.action].unavailable}")
     if args.minutes < 1:
         raise Denied("--minutes must be at least 1")
     seconds = args.minutes * 60
@@ -139,6 +141,10 @@ def cmd_doctor(args, uid, store, actions, eligibility, approvers) -> int:
     import pwd  # POSIX only
 
     exit_code = 0
+    for action in sorted(actions.values(), key=lambda a: a.name):
+        if action.unavailable:
+            exit_code = 1
+            print(f"action {action.name} is unavailable: {action.unavailable}")
     for elig_uid in sorted(eligibility):
         try:
             name = pwd.getpwuid(elig_uid).pw_name

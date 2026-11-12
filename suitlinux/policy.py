@@ -22,7 +22,7 @@ import posixpath
 import stat
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 POLICY_DIR = Path("/etc/suit")
 
@@ -54,6 +54,8 @@ class Action:
     name: str
     argv: Tuple[str, ...]
     description: str
+    # Why the action cannot run on this host, or None when it can.
+    unavailable: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -199,6 +201,24 @@ def parse_eligibility(data: dict, actions: Dict[str, Action]) -> Dict[int, Eligi
     return result
 
 
+def apply_executable_checks(actions: Dict[str, Action], checker: Callable[[str], None]) -> Dict[str, Action]:
+    """Marks actions whose executable is missing or untrusted as unavailable.
+
+    An unsafe or malformed policy file rejects the whole policy. A single
+    profile whose executable is absent on this host, or fails the trust
+    checks, disables only that action: it is refused when requested and
+    reported by doctor, and the remaining actions keep working.
+    """
+    checked: Dict[str, Action] = {}
+    for name, action in actions.items():
+        try:
+            checker(action.argv[0])
+            checked[name] = action
+        except (PolicyError, OSError) as e:
+            checked[name] = Action(name=action.name, argv=action.argv, description=action.description, unavailable=str(e))
+    return checked
+
+
 def load(policy_dir: Path = POLICY_DIR, enforce_ownership: bool = True) -> Tuple[Dict[str, Action], Dict[int, Eligibility], frozenset]:
     """Loads and validates both policy files.
 
@@ -207,11 +227,7 @@ def load(policy_dir: Path = POLICY_DIR, enforce_ownership: bool = True) -> Tuple
     """
     profiles = parse_profiles(read_protected_json(policy_dir / "profiles.json", enforce_ownership))
     if enforce_ownership:
-        for action in profiles.values():
-            try:
-                check_executable(action.argv[0])
-            except (PolicyError, OSError) as e:
-                raise PolicyError(f"profiles: {action.name}: {e}") from e
+        profiles = apply_executable_checks(profiles, check_executable)
     elig_data = read_protected_json(policy_dir / "eligibility.json", enforce_ownership)
     eligibility = parse_eligibility(elig_data, profiles)
     approvers = elig_data.get("approvers") or []

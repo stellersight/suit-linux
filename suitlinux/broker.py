@@ -73,6 +73,8 @@ def authorize(action_name: str, uid: int, store: Store, actions: Dict[str, polic
     reason = None
     if action is None:
         reason = "unknown action"
+    elif action.unavailable:
+        reason = f"action unavailable on this host: {action.unavailable}"
     elif elig is None or action_name not in elig.actions:
         reason = "caller is not eligible for this action"
     else:
