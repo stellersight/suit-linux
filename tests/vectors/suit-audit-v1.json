@@ -1,0 +1,308 @@
+{
+  "spec": "suit.audit.v1",
+  "hash": "SHA-256( 'SUIT-AUDIT-V1' 0x00 || previous (32 bytes) || JCS(event) )",
+  "rfc8785_string_example": {
+    "comment": "RFC 8785 section 3.2.2.2 string; JCS output must match exactly",
+    "value": "€$\u000f\nA'B\"\\\\\"/",
+    "canonical": "\"€$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\""
+  },
+  "valid": [
+    {
+      "name": "basic",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 1,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "request": "r-0123456789ab",
+          "duration_s": 900
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"duration_s\":900,\"request\":\"r-0123456789ab\"},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":1,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "c46a903489614517ac7c228e4ae7c30909f5d150dfceed054ad4aee821f3f26f"
+    },
+    {
+      "name": "nulls_and_booleans",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "drupal",
+        "seq": 2,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": null,
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": null,
+        "object": null,
+        "outcome": "success",
+        "details": {
+          "partial": false,
+          "complete": true,
+          "note": null
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":null,\"details\":{\"complete\":true,\"note\":null,\"partial\":false},\"event\":\"grant.activated\",\"object\":null,\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":2,\"source\":\"drupal\",\"subject\":null,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "d729ec5b6cf601af4c855850337fa26ee5fc1a8d478dd374c5b12a7107018c9c"
+    },
+    {
+      "name": "unicode",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 3,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "reason": "मरम्मत — café 日本 🙂",
+          "rtl": "שלום"
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"reason\":\"मरम्मत — café 日本 🙂\",\"rtl\":\"שלום\"},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":3,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "f7843f18ad5e5ffa5cc6151081306927ca1d1716016f18aefb49b3f5dda676a4"
+    },
+    {
+      "name": "control_characters",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 4,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "s": "tab\there\nnl\r\u0000\u001f\b\f end"
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"s\":\"tab\\there\\nnl\\r\\u0000\\u001f\\b\\f end\"},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":4,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "8e77e8e4ca380a551627982d5daa52e0f4c709b5c690cdddf310c5aba3650ea2"
+    },
+    {
+      "name": "quotes_and_slashes",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 5,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "s": "a\"b\\c/d</script>"
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"s\":\"a\\\"b\\\\c/d</script>\"},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":5,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "8fdb5c5f7a25cd049d9b16dbfb42f36bdd6b72e2086729fa638bc3947c1ee92a"
+    },
+    {
+      "name": "nested_and_arrays",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 6,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "argv": [
+            "/usr/bin/systemctl",
+            "--no-pager",
+            "restart",
+            "nginx.service"
+          ],
+          "nested": {
+            "z": 1,
+            "a": [
+              1,
+              [
+                2,
+                {
+                  "y": "x"
+                }
+              ]
+            ],
+            "M": "upper sorts first"
+          }
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"argv\":[\"/usr/bin/systemctl\",\"--no-pager\",\"restart\",\"nginx.service\"],\"nested\":{\"M\":\"upper sorts first\",\"a\":[1,[2,{\"y\":\"x\"}]],\"z\":1}},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":6,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "43605bd0adff853035219c713bce7bed42d5e27e3ed237f5c53faadaa9b65c77"
+    },
+    {
+      "name": "integer_boundaries",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 7,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "max": 9007199254740991,
+          "min": -9007199254740991,
+          "zero": 0,
+          "neg": -1
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"max\":9007199254740991,\"min\":-9007199254740991,\"neg\":-1,\"zero\":0},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":7,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "fb3a03066ee34b777357c2cf402affbeb3b6491de9f73ee5d9df3933711743d7"
+    },
+    {
+      "name": "key_order",
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 8,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "b": 1,
+          "a": 2,
+          "B": 3,
+          "_": 4,
+          "0": 5,
+          "a.b": 6,
+          "a:b": 7,
+          "a-b": 8
+        }
+      },
+      "previous": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "canonical": "{\"actor\":2000,\"boot_id\":\"8f1d3c2a-1111-4222-8333-944455556666\",\"details\":{\"0\":5,\"B\":3,\"_\":4,\"a\":2,\"a-b\":8,\"a.b\":6,\"a:b\":7,\"b\":1},\"event\":\"grant.activated\",\"object\":\"service.restart.nginx\",\"outcome\":\"success\",\"schema\":\"suit.audit.v1\",\"seq\":8,\"source\":\"suit-linux\",\"subject\":1001,\"time\":\"2026-11-12T03:00:00Z\"}",
+      "hash": "a90119baf8898681ec88bd6edba7bdba566014ff3c1a60936b9a14038236f7bc"
+    }
+  ],
+  "chain": [
+    {
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 1,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "request.created",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "request": "r-chain"
+        }
+      },
+      "previous": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "b31225161a0e2e9d287f1c2a842733137dc8c854ecd85ffc78c7d6fa0cfdffe7"
+    },
+    {
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 2,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "grant.activated",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "request": "r-chain"
+        }
+      },
+      "previous": "b31225161a0e2e9d287f1c2a842733137dc8c854ecd85ffc78c7d6fa0cfdffe7",
+      "hash": "7c7ec5f4f9021fce402461ad47298dd072abc5b4e1259dd890c357558b4323ba"
+    },
+    {
+      "event": {
+        "schema": "suit.audit.v1",
+        "source": "suit-linux",
+        "seq": 3,
+        "time": "2026-11-12T03:00:00Z",
+        "boot_id": "8f1d3c2a-1111-4222-8333-944455556666",
+        "event": "exec.allowed",
+        "actor": 2000,
+        "subject": 1001,
+        "object": "service.restart.nginx",
+        "outcome": "success",
+        "details": {
+          "request": "r-chain"
+        }
+      },
+      "previous": "7c7ec5f4f9021fce402461ad47298dd072abc5b4e1259dd890c357558b4323ba",
+      "hash": "fae849b1783aa68a095fa20ae30a1dbb845124897c27d589a02d098da14a1fba"
+    }
+  ],
+  "invalid": [
+    {
+      "name": "float",
+      "json": "{\"schema\":\"suit.audit.v1\",\"seq\":1.5}"
+    },
+    {
+      "name": "negative_zero",
+      "json": "{\"x\":-0.0}"
+    },
+    {
+      "name": "exponent",
+      "json": "{\"x\":1e3}"
+    },
+    {
+      "name": "unsafe_integer",
+      "json": "{\"x\":9007199254740992}"
+    },
+    {
+      "name": "duplicate_keys",
+      "json": "{\"a\":1,\"a\":2}"
+    },
+    {
+      "name": "non_ascii_key",
+      "json": "{\"café\":1}"
+    },
+    {
+      "name": "empty_key",
+      "json": "{\"\":1}"
+    },
+    {
+      "name": "lone_surrogate",
+      "json": "{\"x\":\"\\ud800\"}"
+    },
+    {
+      "name": "nan",
+      "json": "{\"x\":NaN}"
+    }
+  ]
+}
