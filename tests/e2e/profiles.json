@@ -1,0 +1,8 @@
+{
+  "schema": "suit.profiles.v1",
+  "actions": {
+    "proof.whoami": {"argv": ["/usr/bin/id", "-u"], "description": "Print the effective uid"},
+    "proof.touch": {"argv": ["/usr/bin/touch", "/root/suit-proof"], "description": "Write where only root can"},
+    "proof.stdin": {"argv": ["/usr/bin/head", "-c", "64"], "description": "Echo standard input"}
+  }
+}

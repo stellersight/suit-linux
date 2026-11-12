@@ -2,7 +2,7 @@
 
 Just-in-time privileged operations for Linux hosts, through a small local broker.
 
-**Status: pre-release (0.2.0.dev0).** The decision logic is unit-tested. It has not yet been verified end to end on a Linux VM with real sudo, users, `CLOCK_BOOTTIME` and reboot. Do not deploy to production until that verification exists.
+**Status: pre-release (0.2.0.dev0).** The decision logic has unit tests. The full lifecycle is verified end to end on Debian 12, Rocky Linux 9.3 and Alpine 3.20 in containers, with real sudo, real users and the kernel's `CLOCK_BOOTTIME` (31 checks each; `tests/e2e`). Not yet verified: behaviour across an actual reboot (covered only by unit tests, since a container cannot reboot) and systemd-managed services as targets. Containers share the host kernel, so this is not a substitute for a VM test before production use.
 
 Part of SUIT, StellerSight's access-governance project. The [Drupal module](https://www.drupal.org/project/suit) applies the same model inside Drupal.
 
