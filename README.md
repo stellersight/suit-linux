@@ -2,7 +2,7 @@
 
 Just-in-time privileged operations for Linux hosts, through a small local broker.
 
-**Status: pre-release (0.2.0.dev0).** The decision logic has unit tests. The full lifecycle is verified end to end on Debian 12, Rocky Linux 9.3 and Alpine 3.20 in containers, with real sudo, real users and the kernel's `CLOCK_BOOTTIME` (31 checks each; `tests/e2e`). Not yet verified: behaviour across an actual reboot (covered only by unit tests, since a container cannot reboot) and systemd-managed services as targets. Containers share the host kernel, so this is not a substitute for a VM test before production use.
+**Status: experimental pre-release (0.2.0.dev0).** A just-in-time broker for privileged commands, not a complete Linux identity or privileged-access platform. The decision logic has unit tests. The full lifecycle is verified end to end on Debian 12, Rocky Linux 9.3 and Alpine 3.20 in containers, with real sudo, real users and the kernel's `CLOCK_BOOTTIME` (`tests/e2e`). Behaviour across a real reboot is verified on Debian 12 in a QEMU virtual machine: a grant issued before the reboot is refused and recorded as expired after it, also with the wall clock moved back (`tests/vm`). Not yet verified: reboot on other distributions, and systemd-managed services as targets. Not implemented: separation of duties and access reviews.
 
 Part of SUIT, StellerSight's access-governance project. The [Drupal module](https://www.drupal.org/project/suit) applies the same model inside Drupal.
 
@@ -72,10 +72,24 @@ sudo suit verify                        # recompute the audit chain
 sudo suit doctor                        # find sudo rights that bypass SUIT
 ```
 
+## Testing
+
+```bash
+python3 -m unittest discover -s tests -v                       # unit tests
+docker build -f tests/e2e/Dockerfile -t suit-e2e . && docker run --rm suit-e2e
+docker build -f tests/vm/Dockerfile -t suit-vm . && docker run --rm -v suit-vm-cache:/cache suit-vm
+```
+
+The VM test boots a Debian 12 cloud image under QEMU (with KVM when `/dev/kvm` is available) and reboots it. CI runs all three on every push.
+
+## Security
+
+Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
+
 ## History
 
-`legacy/` holds the previous prototype for reference. An audit on 12 November 2026 found that its signatures could be forged (HMAC keys were in the source), its sudo profiles each led to root, a request could approve itself, expired grants kept their sudo rules, and its eBPF programs had no loader. None of that code is used by this version.
+`legacy/` holds the previous prototype for reference. An audit on 12 November 2026 found that its signatures could be forged (HMAC keys were in the source), its sudo profiles each led to root, a request could approve itself, expired grants kept their sudo rules, and its eBPF programs had no loader. None of that code is used, installed or maintained by this version.
 
 ## License
 
-GPL-2.0-or-later.
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

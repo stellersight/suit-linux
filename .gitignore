@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 build-*.log
 run-*.log
+
+# Local tool output
+*.log
