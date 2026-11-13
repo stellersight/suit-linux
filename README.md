@@ -46,6 +46,19 @@ Expiry needs no cleanup job. The next call after the deadline, after revocation 
 
 ## Install
 
+### From the StellerSight package repository
+
+Signed packages for apt (Debian, Ubuntu), dnf/yum (RHEL, Rocky, AlmaLinux, Oracle Linux, Fedora, Amazon Linux 2023), zypper (openSUSE Tumbleweed), apk (Alpine) and pacman (Arch) are at <https://stellersight.github.io/packages/>, with the signing-key fingerprint. For example, on RHEL and its rebuilds:
+
+```bash
+sudo curl -fsSL https://stellersight.github.io/packages/rpm/stellersight.repo -o /etc/yum.repos.d/stellersight.repo
+sudo dnf install suit-linux
+```
+
+The package installs an empty policy, so it grants nothing until you define actions and eligibility. It needs Python 3.8+ as `python3`, so RHEL 8 and openSUSE Leap 15 (Python 3.6) are not supported.
+
+### From a checkout
+
 Run as root. The broker and policy must be root-owned and not writable by anyone else; the broker refuses policy that is not.
 
 ```bash
