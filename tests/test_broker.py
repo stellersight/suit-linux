@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from suitlinux import policy
+from suitlinux import clock, policy
 from suitlinux.broker import Denied, authorize, caller_uid
 from suitlinux.cli import listing_problem, sudo_rules_beyond_broker
 from suitlinux.store import RISK_NORMAL, RISK_SUSPENDED, Store, StoreError
@@ -410,3 +410,30 @@ class TestStatePath(unittest.TestCase):
     def test_foreign_wal_file_is_refused(self):
         with self.assertRaises(policy.PolicyError):
             self.check(**{"/var/lib/suit/state.db-wal": ("file", 1000, 0o600)})
+
+
+class TestTimeNamespace(unittest.TestCase):
+    """A lagging CLOCK_BOOTTIME in a child time namespace must not extend a grant."""
+
+    @staticmethod
+    def links(own, host):
+        def readlink(path):
+            value = {"/proc/self/ns/time": own, "/proc/1/ns/time": host}[path]
+            if isinstance(value, BaseException):
+                raise value
+            return value
+        return readlink
+
+    def test_host_namespace_is_accepted(self):
+        clock.check_host_time_namespace(self.links("time:[4026531834]", "time:[4026531834]"))
+
+    def test_child_time_namespace_is_refused(self):
+        with self.assertRaises(clock.ClockUnavailable):
+            clock.check_host_time_namespace(self.links("time:[4026532501]", "time:[4026531834]"))
+
+    def test_kernel_without_time_namespaces_is_accepted(self):
+        clock.check_host_time_namespace(self.links(FileNotFoundError(), "unused"))
+
+    def test_unreadable_host_namespace_fails_closed(self):
+        with self.assertRaises(clock.ClockUnavailable):
+            clock.check_host_time_namespace(self.links("time:[4026531834]", PermissionError()))

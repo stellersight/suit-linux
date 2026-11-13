@@ -33,7 +33,7 @@ Expiry needs no cleanup job. The next call after the deadline, after revocation 
 | Property | Holds | Limit |
 |---|---|---|
 | A request grants nothing until someone else approves it | Yes | Approvers are listed by UID in policy |
-| Access ends at expiry, revocation or reboot | Yes, checked on each call | Depends on the kernel boot ID and `CLOCK_BOOTTIME`; the broker refuses to run without them |
+| Access ends at expiry, revocation or reboot | Yes, checked on each call | Depends on the kernel boot ID and `CLOCK_BOOTTIME`; the broker refuses to run without them, and refuses to run in a time namespace other than PID 1's, where `CLOCK_BOOTTIME` can be offset |
 | Only the policy's exact command runs | Yes | Policy loading refuses wildcards, relative paths, and shells, pagers, editors and other executables that can run arbitrary code. Each executable, every directory above it, and a script's interpreter must be root-owned, free of symlinked directories, and not writable by group or others. A fixed command can still execute code from files an attacker can modify (for example a service's configuration). Review the whole execution chain for each action. |
 | Suspension revokes every grant and blocks new ones | Yes, persisted | Any approver can suspend. Only root, logged in directly (console or `su -`, not through sudo), can resume, so one compromised approver cannot reopen the host. Resuming does not restore revoked grants. |
 | The broker's own code is trustworthy | Checked on every run | The Python interpreter and every SUIT module must be root-controlled, or the broker and CLI refuse to run |
