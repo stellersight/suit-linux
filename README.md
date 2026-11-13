@@ -88,7 +88,7 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## History
 
-`legacy/` holds the previous prototype for reference. An audit on 12 November 2026 found that its signatures could be forged (HMAC keys were in the source), its sudo profiles each led to root, a request could approve itself, expired grants kept their sudo rules, and its eBPF programs had no loader. None of that code is used, installed or maintained by this version.
+This version replaced an earlier prototype, which is not published. An audit on 12 November 2026 found that its signatures could be forged (HMAC keys were in the source), its sudo profiles each led to root, a request could approve itself, expired grants kept their sudo rules, and its eBPF programs had no loader. None of that code is part of this version.
 
 ## License
 

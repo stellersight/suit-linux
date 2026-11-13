@@ -37,4 +37,3 @@ These are documented limits, not vulnerabilities (see the README):
 - A rebuilt audit chain by someone with root: the chain is unkeyed and
   tamper-evident, not immutable.
 - A call already authorised when a revocation commits.
-- Anything in `legacy/`, which is not installed or maintained.
