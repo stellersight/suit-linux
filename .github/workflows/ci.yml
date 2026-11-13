@@ -16,7 +16,7 @@ jobs:
       matrix:
         python: ['3.9', '3.11', '3.12', '3.13']
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python }}
@@ -26,7 +26,7 @@ jobs:
     name: Coverage (statement and branch)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
@@ -46,7 +46,7 @@ jobs:
       matrix:
         base: ['debian:12-slim', 'rockylinux:9.3-minimal', 'alpine:3.20']
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker build --build-arg BASE=${{ matrix.base }} -f tests/e2e/Dockerfile -t suit-e2e .
       - run: docker run --rm suit-e2e | tee e2e.log && grep -q ', 0 failed' e2e.log
 
@@ -54,7 +54,7 @@ jobs:
     name: Real reboot (Debian 12 VM)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Allow the runner to use KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
@@ -70,7 +70,7 @@ jobs:
       matrix:
         base: ['debian:12-slim', 'ubuntu:24.04', 'rockylinux:9', 'fedora:41']
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build .deb and .rpm with nfpm
         run: |
           mkdir -p dist
