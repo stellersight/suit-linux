@@ -35,6 +35,13 @@ def _boot_or_none():
         return None
 
 
+def _seconds_or_none():
+    try:
+        return clock.boot_seconds()
+    except clock.ClockUnavailable:
+        return None
+
+
 def cmd_request(args, uid, store, actions, eligibility, approvers) -> int:
     elig = eligibility.get(uid)
     if elig is None or args.action not in elig.actions:
@@ -46,7 +53,8 @@ def cmd_request(args, uid, store, actions, eligibility, approvers) -> int:
     seconds = args.minutes * 60
     if seconds > elig.max_duration_seconds:
         raise Denied(f"the maximum for this action is {elig.max_duration_seconds // 60} minutes")
-    rid = store.create_request(uid, args.action, args.reason, seconds, _boot_or_none())
+    rid = store.create_request(uid, args.action, args.reason, seconds, _boot_or_none(),
+                               sod=getattr(args, "sod", ()), now_boot=_seconds_or_none())
     print(f"{rid} pending approval: {args.action} for {args.minutes} minutes")
     return 0
 
@@ -54,7 +62,7 @@ def cmd_request(args, uid, store, actions, eligibility, approvers) -> int:
 def cmd_approve(args, uid, store, actions, eligibility, approvers) -> int:
     if uid not in approvers:
         raise Denied(f"uid {uid} is not an approver")
-    req = store.approve(args.request, uid, clock.boot_id(), clock.boot_seconds())
+    req = store.approve(args.request, uid, clock.boot_id(), clock.boot_seconds(), sod=getattr(args, "sod", ()))
     print(f"{args.request} active: uid {req['uid']} may run {req['action']} for {req['duration_s'] // 60} minutes, until reboot at the latest")
     return 0
 
@@ -153,6 +161,24 @@ def listing_problem(returncode: int, listing: str) -> Optional[str]:
     return None
 
 
+def sod_report(sod, eligibility) -> List[str]:
+    """Describes separation-of-duties policies for doctor. Informational only.
+
+    Being eligible for two conflicting actions is allowed: only holding active
+    grants for both at once is refused. It is still worth knowing.
+    """
+    if not sod:
+        return ["separation of duties: no policies (/etc/suit/sod.json absent)"]
+    lines = []
+    for pol in sod:
+        lines.append(f"separation of duties: {pol.name} ({pol.mode}): {', '.join(sorted(pol.actions))}")
+        for elig_uid in sorted(eligibility):
+            both = sorted(pol.actions & eligibility[elig_uid].actions)
+            if len(both) >= 2:
+                lines.append(f"    uid {elig_uid} is eligible for {len(both)} of them: {', '.join(both)}")
+    return lines
+
+
 def cmd_doctor(args, uid, store, actions, eligibility, approvers) -> int:
     import pwd  # POSIX only
 
@@ -161,6 +187,8 @@ def cmd_doctor(args, uid, store, actions, eligibility, approvers) -> int:
         if action.unavailable:
             exit_code = 1
             print(f"action {action.name} is unavailable: {action.unavailable}")
+    for line in sod_report(getattr(args, "sod", ()), eligibility):
+        print(line)
     for elig_uid in sorted(eligibility):
         try:
             name = pwd.getpwuid(elig_uid).pw_name
@@ -212,6 +240,7 @@ def main(argv=None) -> int:
         uid = caller_uid()
         verify_own_installation()
         actions, eligibility, approvers = policy.load()
+        args.sod = policy.load_sod(actions)
         policy.check_state_path(str(DEFAULT_DB))
         store = Store(DEFAULT_DB)
         handlers = {

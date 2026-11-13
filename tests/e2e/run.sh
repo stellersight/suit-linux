@@ -80,6 +80,21 @@ out=$(/usr/bin/suit doctor 2>&1); rc=$?
 [ $rc -ne 0 ] && echo "$out" | grep -q "outside SUIT" && ok "doctor reports a bypassing sudo rule" || bad "doctor reports a bypassing sudo rule" "$out"
 rm -f /etc/sudoers.d/zz-bypass
 
+# 10b. Separation of duties (docs/separation-of-duties.md).
+RID6=$(request proof.touch 30); as_bob "/usr/bin/suit approve $RID6" >/dev/null
+printf '%s\n' '{"schema": "suit.sod.v1", "policies": [{"name": "e2e-conflict", "actions": ["proof.whoami", "proof.touch"], "mode": "strict"}]}' > /etc/suit/sod.json
+chown root:root /etc/suit/sod.json; chmod 0644 /etc/suit/sod.json
+expect_fail "sod: conflicting request refused" "as_alice 'sudo -n /usr/bin/suit request proof.whoami --minutes 5 --reason sod-test'"
+expect_ok "sod: the existing grant still works" "as_alice 'sudo -n /usr/bin/suit-exec proof.touch'"
+printf '%s\n' '{"schema": "suit.sod.v1", "policies": [{"name": "broken", "actions": ["proof.whoami"], "mode": "strict"}]}' > /etc/suit/sod.json
+expect_fail "sod: malformed policy refuses everything" "as_alice 'sudo -n /usr/bin/suit-exec proof.touch'"
+printf '%s\n' '{"schema": "suit.sod.v1", "policies": [{"name": "e2e-conflict", "actions": ["proof.whoami", "proof.touch"], "mode": "strict"}]}' > /etc/suit/sod.json
+chmod 0666 /etc/suit/sod.json
+expect_fail "sod: writable policy file refuses everything" "as_alice 'sudo -n /usr/bin/suit-exec proof.touch'"
+rm -f /etc/suit/sod.json
+expect_ok "sod: removing the policy restores normal behaviour" "as_alice 'sudo -n /usr/bin/suit-exec proof.touch'"
+as_alice "sudo -n /usr/bin/suit revoke $RID6 --reason sod-done" >/dev/null
+
 # 11. Expiry needs no cleanup: wait past a one-minute grant.
 RID5=$(request proof.whoami 1); as_bob "/usr/bin/suit approve $RID5" >/dev/null
 expect_ok "short grant works before deadline" "as_alice 'sudo -n /usr/bin/suit-exec proof.whoami'"

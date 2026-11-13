@@ -203,6 +203,61 @@ def parse_eligibility(data: dict, actions: Dict[str, Action]) -> Dict[int, Eligi
     return result
 
 
+SOD_MODES = ("strict", "warn")
+
+
+@dataclass(frozen=True)
+class SodPolicy:
+    """Actions that one user may not hold active grants for at the same time."""
+    name: str
+    actions: frozenset
+    mode: str
+
+
+def parse_sod(data: dict, actions: Dict[str, Action]) -> List[SodPolicy]:
+    """Validates suit.sod.v1. Any defect rejects the whole policy set."""
+    if data.get("schema") != "suit.sod.v1":
+        raise PolicyError("sod: expected schema suit.sod.v1")
+    entries = data.get("policies")
+    if not isinstance(entries, list):
+        raise PolicyError("sod: policies must be a list")
+    seen = set()
+    result: List[SodPolicy] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise PolicyError("sod: each policy must be an object")
+        name = entry.get("name")
+        if not isinstance(name, str) or not name or set(name) - ACTION_NAME_CHARS:
+            raise PolicyError(f"sod: invalid policy name {name!r}")
+        if name in seen:
+            raise PolicyError(f"sod: duplicate policy name {name}")
+        seen.add(name)
+        names = entry.get("actions")
+        if not isinstance(names, list) or not all(isinstance(n, str) for n in names) or len(set(names)) < 2:
+            raise PolicyError(f"sod: {name}: actions must list at least two different actions")
+        unknown = [n for n in names if n not in actions]
+        if unknown:
+            raise PolicyError(f"sod: {name}: unknown actions {unknown}")
+        mode = entry.get("mode")
+        if mode not in SOD_MODES:
+            raise PolicyError(f"sod: {name}: mode must be one of {SOD_MODES}")
+        result.append(SodPolicy(name=name, actions=frozenset(names), mode=mode))
+    return result
+
+
+def load_sod(actions: Dict[str, Action], policy_dir: Path = POLICY_DIR, enforce_ownership: bool = True,
+             lstat=os.lstat) -> List[SodPolicy]:
+    """Loads /etc/suit/sod.json. No file means no policies; a bad file refuses everything."""
+    path = policy_dir / "sod.json"
+    try:
+        lstat(str(path))
+    except FileNotFoundError:
+        return []
+    except OSError as e:
+        raise PolicyError(f"cannot inspect {path}: {e}") from e
+    return parse_sod(read_protected_json(path, enforce_ownership), actions)
+
+
 def apply_executable_checks(actions: Dict[str, Action], checker: Callable[[str], None]) -> Dict[str, Action]:
     """Marks actions whose executable is missing or untrusted as unavailable.
 

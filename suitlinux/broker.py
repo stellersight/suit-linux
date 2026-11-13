@@ -23,10 +23,10 @@ the caller ever reaches the executed program.
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence
 
 from suitlinux import clock, policy
-from suitlinux.store import Store, DEFAULT_DB
+from suitlinux.store import DEFAULT_DB, SodRefusal, Store
 
 SAFE_ENV: Dict[str, str] = {
     "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
@@ -68,7 +68,8 @@ def caller_uid(environ: Optional[Dict[str, str]] = None, euid: Optional[int] = N
 
 
 def authorize(action_name: str, uid: int, store: Store, actions: Dict[str, policy.Action],
-              eligibility: Dict[int, policy.Eligibility], boot: str, now_boot: float) -> policy.Action:
+              eligibility: Dict[int, policy.Eligibility], boot: str, now_boot: float,
+              sod: Sequence[policy.SodPolicy] = ()) -> policy.Action:
     """Decides whether uid may run action_name now. Records the decision either way."""
     action = actions.get(action_name)
     elig = eligibility.get(uid)
@@ -80,9 +81,12 @@ def authorize(action_name: str, uid: int, store: Store, actions: Dict[str, polic
     elif elig is None or action_name not in elig.actions:
         reason = "caller is not eligible for this action"
     else:
-        grant = store.authorize(uid, action_name, boot, now_boot)
+        try:
+            grant = store.authorize(uid, action_name, boot, now_boot, sod)
+        except SodRefusal as e:
+            grant, reason = None, str(e)
         if grant is None:
-            reason = "no active grant"
+            reason = reason or "no active grant"
         else:
             store.record_event("exec.allowed", uid, "success", uid, action_name, boot,
                                {"request": grant["id"], "argv": list(action.argv)})
@@ -126,9 +130,10 @@ def main(argv=None) -> int:  # pragma: no cover - exercised through tests of its
         uid = caller_uid()
         verify_own_installation()
         actions, eligibility, _ = policy.load()
+        sod = policy.load_sod(actions)
         policy.check_state_path(str(DEFAULT_DB))
         store = Store(DEFAULT_DB)
-        action = authorize(argv[0], uid, store, actions, eligibility, clock.boot_id(), clock.boot_seconds())
+        action = authorize(argv[0], uid, store, actions, eligibility, clock.boot_id(), clock.boot_seconds(), sod)
         store.close()
     except (Denied, policy.PolicyError, clock.ClockUnavailable) as e:
         print(f"suit-exec: {e}", file=sys.stderr)

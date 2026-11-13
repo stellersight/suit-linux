@@ -22,7 +22,7 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Sequence
 
 from suitlinux.clock import wall_iso
 
@@ -90,6 +90,10 @@ def check_reason(reason: str) -> str:
 
 def _canonical(record: Dict[str, Any]) -> bytes:
     return json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
+class SodRefusal(StoreError):
+    """A separation-of-duties policy refused the decision. The refusal is already audited."""
 
 
 class Store:
@@ -205,24 +209,76 @@ class Store:
 
     # -- requests and grants -----------------------------------------------------
 
-    def create_request(self, uid: int, action: str, reason: str, duration_s: int, boot: Optional[str]) -> str:
+    # -- separation of duties ----------------------------------------------------
+
+    def _sod_conflicts(self, db: sqlite3.Connection, uid: int, action: str, sod: Sequence[Any],
+                       boot: Optional[str], now_boot: Optional[float], exclude: Optional[str] = None) -> List[tuple]:
+        """Returns (policy, other_action, grant_id) for each active grant of uid that conflicts with action.
+
+        Without a boot identity or clock every grant marked active counts, so
+        the check errs towards refusing.
+        """
+        found = []
+        for pol in sod:
+            if action not in pol.actions:
+                continue
+            others = sorted(a for a in pol.actions if a != action)
+            marks = ",".join("?" * len(others))
+            rows = db.execute(
+                f"SELECT id, action, boot_id, expires_boot FROM requests WHERE uid=? AND state='active' AND action IN ({marks})",
+                (uid, *others)).fetchall()
+            for row in rows:
+                if row["id"] == exclude:
+                    continue
+                if boot is not None and now_boot is not None and (row["boot_id"] != boot or now_boot >= row["expires_boot"]):
+                    continue
+                found.append((pol, row["action"], row["id"]))
+        return found
+
+    def _enforce_sod(self, db: sqlite3.Connection, stage: str, actor_uid: int, uid: int, action: str,
+                     conflicts: List[tuple], boot: Optional[str], context: Dict[str, Any]) -> Optional[str]:
+        """Audits every conflict; returns the refusal message if a strict policy applies."""
+        refusal = None
+        for pol, other, grant in conflicts:
+            details = dict(context, stage=stage, policy=pol.name, conflicting_action=other, conflicting_grant=grant)
+            if pol.mode == "strict":
+                self._append_event(db, "sod.refused", actor_uid, uid, action, "denied", boot, details)
+                if refusal is None:
+                    refusal = (f"separation of duties: policy {pol.name} does not allow {action} "
+                               f"while {other} is active ({grant})")
+            else:
+                self._append_event(db, "sod.warning", actor_uid, uid, action, "success", boot, details)
+        return refusal
+
+    # -- requests and grants -----------------------------------------------------
+
+    def create_request(self, uid: int, action: str, reason: str, duration_s: int, boot: Optional[str],
+                       sod: Sequence[Any] = (), now_boot: Optional[float] = None) -> str:
         reason = check_reason(reason)
         rid = "r-" + uuid.uuid4().hex[:12]
+        # One transaction decides and records. A refusal is committed with its
+        # audit event first, then raised: raising inside would roll it back.
         with self.transaction() as db:
             if self.risk_level(db) == RISK_SUSPENDED:
                 raise StoreError("host is under risk suspension; no requests are accepted")
-            db.execute(
-                "INSERT INTO requests (id, uid, action, reason, duration_s, state, created_wall) VALUES (?, ?, ?, ?, ?, 'pending', ?)",
-                (rid, uid, action, reason, duration_s, wall_iso()),
-            )
-            self._append_event(db, "request.created", uid, uid, action, "success", boot,
-                               {"request": rid, "duration_s": duration_s, "reason": reason})
+            refusal = self._enforce_sod(db, "request", uid, uid, action,
+                                        self._sod_conflicts(db, uid, action, sod, boot, now_boot), boot, {})
+            if refusal is None:
+                db.execute(
+                    "INSERT INTO requests (id, uid, action, reason, duration_s, state, created_wall) VALUES (?, ?, ?, ?, ?, 'pending', ?)",
+                    (rid, uid, action, reason, duration_s, wall_iso()),
+                )
+                self._append_event(db, "request.created", uid, uid, action, "success", boot,
+                                   {"request": rid, "duration_s": duration_s, "reason": reason})
+        if refusal is not None:
+            raise SodRefusal(refusal)
         return rid
 
     def get(self, rid: str) -> Optional[sqlite3.Row]:
         return self.db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
 
-    def approve(self, rid: str, approver_uid: int, boot: str, now_boot: float) -> sqlite3.Row:
+    def approve(self, rid: str, approver_uid: int, boot: str, now_boot: float, sod: Sequence[Any] = ()) -> sqlite3.Row:
+        refusal = None
         with self.transaction() as db:
             req = db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
             if req is None:
@@ -233,13 +289,23 @@ class Store:
                 raise StoreError("a request cannot be approved by the person who made it")
             if self.risk_level(db) == RISK_SUSPENDED:
                 raise StoreError("host is under risk suspension; no grants can be approved")
-            db.execute(
-                "UPDATE requests SET state='active', decided_by=?, decided_wall=?, boot_id=?, starts_boot=?, expires_boot=? WHERE id=?",
-                (approver_uid, wall_iso(), boot, now_boot, now_boot + req["duration_s"], rid),
-            )
-            self._append_event(db, "grant.activated", approver_uid, req["uid"], req["action"], "success", boot,
-                               {"request": rid, "duration_s": req["duration_s"]})
-            return db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
+            # Approval is the authoritative separation-of-duties check. It runs in
+            # the same write transaction as the activation, so two concurrent
+            # approvals of conflicting requests cannot both pass it.
+            refusal = self._enforce_sod(db, "approval", approver_uid, req["uid"], req["action"],
+                                        self._sod_conflicts(db, req["uid"], req["action"], sod, boot, now_boot, exclude=rid),
+                                        boot, {"request": rid})
+            if refusal is None:
+                db.execute(
+                    "UPDATE requests SET state='active', decided_by=?, decided_wall=?, boot_id=?, starts_boot=?, expires_boot=? WHERE id=?",
+                    (approver_uid, wall_iso(), boot, now_boot, now_boot + req["duration_s"], rid),
+                )
+                self._append_event(db, "grant.activated", approver_uid, req["uid"], req["action"], "success", boot,
+                                   {"request": rid, "duration_s": req["duration_s"]})
+                approved = db.execute("SELECT * FROM requests WHERE id = ?", (rid,)).fetchone()
+        if refusal is not None:
+            raise SodRefusal(refusal)
+        return approved
 
     def deny(self, rid: str, approver_uid: int, reason: str, boot: Optional[str]) -> None:
         reason = check_reason(reason)
@@ -262,13 +328,15 @@ class Store:
             self._append_event(db, "grant.revoked", by_uid, req["uid"], req["action"], "success", boot,
                                {"request": rid, "reason": reason})
 
-    def authorize(self, uid: int, action: str, boot: str, now_boot: float) -> Optional[sqlite3.Row]:
+    def authorize(self, uid: int, action: str, boot: str, now_boot: float, sod: Sequence[Any] = ()) -> Optional[sqlite3.Row]:
         """Returns the grant that authorises uid to run action now, or None.
 
         Grants from another boot, or past their deadline, are closed as
         expired in the same transaction, so state never claims an active grant
         that can no longer be used.
         """
+        refusal = None
+        granted = None
         with self.transaction() as db:
             if self.risk_level(db) == RISK_SUSPENDED:
                 return None
@@ -278,8 +346,17 @@ class Store:
                     db.execute("UPDATE requests SET state='expired', close_reason=? WHERE id=?", (why, req["id"]))
                     self._append_event(db, "grant.expired", 0, uid, action, "success", boot, {"request": req["id"], "cause": why})
                     continue
-                return req
-            return None
+                # Re-checked at execution: catches policies added or tightened
+                # after approval.
+                refusal = self._enforce_sod(db, "execution", uid, uid, action,
+                                            self._sod_conflicts(db, uid, action, sod, boot, now_boot, exclude=req["id"]),
+                                            boot, {"request": req["id"]})
+                if refusal is None:
+                    granted = req
+                break
+        if refusal is not None:
+            raise SodRefusal(refusal)
+        return granted
 
     def list_requests(self, states: Optional[List[str]] = None) -> List[sqlite3.Row]:
         if states:

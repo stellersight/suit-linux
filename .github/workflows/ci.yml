@@ -75,7 +75,7 @@ jobs:
         run: |
           mkdir -p dist
           for p in deb rpm; do
-            docker run --rm -v "$PWD:/w" -w /w -e VERSION=0.2.0 -e PRERELEASE=beta1 -e APK_KEY_FILE= \
+            docker run --rm -v "$PWD:/w" -w /w -e VERSION=0.3.0 -e PRERELEASE=beta1 -e APK_KEY_FILE= \
               goreleaser/nfpm:v2.41.1 package -f packaging/nfpm-suit.yaml -p $p -t dist/
           done
       - run: docker build --build-arg BASE=${{ matrix.base }} -f tests/package/Dockerfile -t suit-pkg .
