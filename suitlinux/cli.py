@@ -17,7 +17,7 @@ import argparse
 import json
 import subprocess
 import sys
-from typing import List
+from typing import List, Optional
 
 from suitlinux import clock, policy
 from suitlinux.broker import Denied, caller_uid, verify_own_installation
@@ -137,6 +137,20 @@ def sudo_rules_beyond_broker(listing: str) -> List[str]:
     return findings
 
 
+def listing_problem(returncode: int, listing: str) -> Optional[str]:
+    """Returns why a sudo -l listing cannot be trusted as complete, or None.
+
+    A failed or unrecognised listing must never read as "only SUIT broker
+    rules": that would tell an administrator a bypass was checked when it was
+    not.
+    """
+    if returncode != 0:
+        return f"sudo -l exited with status {returncode}"
+    if "may run the following commands" not in listing:
+        return "sudo -l printed no rule listing (is the user in suit-eligible?)"
+    return None
+
+
 def cmd_doctor(args, uid, store, actions, eligibility, approvers) -> int:
     import pwd  # POSIX only
 
@@ -152,7 +166,17 @@ def cmd_doctor(args, uid, store, actions, eligibility, approvers) -> int:
             print(f"uid {elig_uid}: no such user")
             exit_code = 1
             continue
-        out = subprocess.run(["sudo", "-n", "-l", "-U", name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20)
+        # The parser reads sudo's English output, so force the C locale.
+        env = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C", "LANG": "C"}
+        out = subprocess.run(["sudo", "-n", "-l", "-U", name], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, timeout=20, env=env)
+        problem = listing_problem(out.returncode, out.stdout)
+        if problem:
+            exit_code = 1
+            print(f"{name} (uid {elig_uid}): could not check sudo rights: {problem}")
+            if out.stderr.strip():
+                print(f"    {out.stderr.strip()}")
+            continue
         extra = sudo_rules_beyond_broker(out.stdout)
         if extra:
             exit_code = 1
@@ -186,6 +210,7 @@ def main(argv=None) -> int:
         uid = caller_uid()
         verify_own_installation()
         actions, eligibility, approvers = policy.load()
+        policy.check_state_path(str(DEFAULT_DB))
         store = Store(DEFAULT_DB)
         handlers = {
             "request": cmd_request, "approve": cmd_approve, "deny": cmd_deny, "revoke": cmd_revoke,

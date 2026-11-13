@@ -236,6 +236,35 @@ def load(policy_dir: Path = POLICY_DIR, enforce_ownership: bool = True) -> Tuple
     return profiles, eligibility, frozenset(approvers)
 
 
+def check_state_path(db_path: str, lstat=os.lstat) -> None:
+    """Refuses a state directory or database that someone other than root controls.
+
+    Grants and the audit chain live here. The installer creates the directory
+    0700, but `install -d` does not repair a directory that already exists, so
+    it is checked on every run: the directory and every one above it must be
+    root-controlled, the directory itself closed to group and others, and an
+    existing database a regular root-owned file that only root can read.
+    """
+    directory = posixpath.dirname(db_path)
+    check_trusted_path(directory, lstat)
+    st = lstat(directory)
+    if st.st_mode & 0o077:
+        raise PolicyError(f"{directory} must not be accessible to group or others (mode {oct(stat.S_IMODE(st.st_mode))})")
+    for path in (db_path, db_path + "-wal", db_path + "-shm"):
+        try:
+            st = lstat(path)
+        except FileNotFoundError:
+            continue
+        except OSError as e:
+            raise PolicyError(f"cannot inspect {path}: {e}") from e
+        if not stat.S_ISREG(st.st_mode):
+            raise PolicyError(f"{path} must be a regular file")
+        if st.st_uid != 0:
+            raise PolicyError(f"{path} must be owned by root (uid {st.st_uid})")
+        if st.st_mode & 0o077:
+            raise PolicyError(f"{path} must not be accessible to group or others (mode {oct(stat.S_IMODE(st.st_mode))})")
+
+
 def verify_installation(module_files, interpreter: str) -> None:
     """Refuses to run unless the broker's own code path is root-controlled.
 

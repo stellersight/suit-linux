@@ -22,7 +22,7 @@ The broker (`suit-exec`) does the following on every call:
 
 1. Identifies the caller from sudo (`SUDO_UID`), never from arguments.
 2. Resolves the action name against root-owned policy. The user supplies a name only: no command, option, path or operand.
-3. Requires an active grant for that caller and action, on this boot, before its `CLOCK_BOOTTIME` deadline, with the host not suspended.
+3. Requires an active grant for that caller and action, on this boot, before its `CLOCK_BOOTTIME` deadline, while SUIT is not suspended on the host (`suit suspend`). Time spent with the machine asleep counts toward the deadline.
 4. Commits the audit event before anything runs.
 5. Executes the policy's exact argument vector with a fixed environment (pagers disabled, no `LD_*`, fixed `PATH`) and inherited file descriptors closed.
 
@@ -40,7 +40,9 @@ Expiry needs no cleanup job. The next call after the deadline, after revocation 
 | A revocation stops a call already authorised | **No** | The authorisation transaction (which commits `exec.allowed`) is the decision point. A revocation that commits after it does not stop that one call, even if the command had not yet started; it takes effect from the next call. Running commands are not interrupted. |
 | The executed command receives no input from the caller | Yes | Standard input is `/dev/null`. Output and errors go to the caller. |
 | Audit events are hash-linked | Locally tamper-evident | Unkeyed. Detects edited or removed records, not a rebuilt chain or truncation of the newest events. Ship events off the host where that matters. |
-| No other sudo path bypasses SUIT | **Not enforced** | `suit doctor` reports eligible users who hold other sudo rights, for example through `wheel`, `sudo` or LDAP. Remove them, or SUIT controls nothing for those users. |
+| No other sudo path bypasses SUIT | **Not enforced** | `suit doctor`, run as root, reports eligible users who hold other sudo rights, for example through `wheel`, `sudo` or LDAP. Remove them, or SUIT controls nothing for those users. A listing it cannot read is reported as a failure, never as clean. |
+| Eligibility follows the account | **By UID** | Eligibility and approvers are listed by numeric UID. If a UID is deleted and reissued, the new account inherits its entries: remove a departing user's entries before reusing the UID. |
+| State and audit data are root's alone | Checked on every run | `/var/lib/suit` must be root-owned and closed to group and others, and the database a root-only regular file, or the broker and CLI refuse to run. |
 
 ## Install
 
@@ -57,7 +59,7 @@ groupadd -f suit-eligible && groupadd -f suit-approvers
 install -m 0440 -o root -g root etc/sudoers.suit /etc/sudoers.d/suit && visudo -cf /etc/sudoers.d/suit
 ```
 
-Then edit `/etc/suit/*.json` and run `sudo suit doctor`.
+Then edit `/etc/suit/*.json` and, as root, run `suit doctor`.
 
 ## Commands
 
@@ -69,7 +71,7 @@ sudo suit revoke r-0123456789ab --reason "done"
 sudo suit suspend --reason "suspected compromise"   # revokes all, refuses new
 su - -c 'suit resume --reason "cleared by IR-42"'  # recovery: root only, not via sudo
 sudo suit verify                        # recompute the audit chain
-sudo suit doctor                        # find sudo rights that bypass SUIT
+suit doctor                             # as root: find sudo rights that bypass SUIT
 ```
 
 ## Testing

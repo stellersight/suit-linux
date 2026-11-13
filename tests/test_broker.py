@@ -13,7 +13,7 @@ from pathlib import Path
 
 from suitlinux import policy
 from suitlinux.broker import Denied, authorize, caller_uid
-from suitlinux.cli import sudo_rules_beyond_broker
+from suitlinux.cli import listing_problem, sudo_rules_beyond_broker
 from suitlinux.store import RISK_NORMAL, RISK_SUSPENDED, Store, StoreError
 
 BOOT = "boot-a"
@@ -229,6 +229,13 @@ User alice may run the following commands on host:
     def test_broker_only_is_clean(self):
         self.assertEqual([], sudo_rules_beyond_broker(self.LISTING.replace("    (ALL : ALL) ALL\n", "")))
 
+    def test_failed_listing_is_never_clean(self):
+        # A failed sudo -l prints nothing, which the parser alone reads as clean.
+        self.assertEqual([], sudo_rules_beyond_broker(""))
+        self.assertIsNotNone(listing_problem(1, ""))
+        self.assertIsNotNone(listing_problem(0, "User alice is not allowed to run sudo on host.\n"))
+        self.assertIsNone(listing_problem(0, self.LISTING))
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -364,3 +371,42 @@ class TestActionAvailability(StoreCase):
         with self.assertRaises(Denied) as ctx:
             authorize("service.restart.nginx", 1001, self.store, checked, elig, BOOT, 150.0)
         self.assertIn("unavailable", str(ctx.exception))
+
+
+class TestStatePath(unittest.TestCase):
+
+    TREE = {
+        "/": ("dir", 0, 0o755), "/var": ("dir", 0, 0o755), "/var/lib": ("dir", 0, 0o755),
+        "/var/lib/suit": ("dir", 0, 0o700), "/var/lib/suit/state.db": ("file", 0, 0o600),
+    }
+
+    def check(self, **changes):
+        tree = dict(self.TREE, **changes)
+        policy.check_state_path("/var/lib/suit/state.db", FakeFS(tree).lstat)
+
+    def test_root_only_state_is_accepted(self):
+        self.check()
+
+    def test_new_database_is_accepted(self):
+        tree = {k: v for k, v in self.TREE.items() if not k.endswith("state.db")}
+        policy.check_state_path("/var/lib/suit/state.db", FakeFS(tree).lstat)
+
+    def test_readable_state_directory_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self.check(**{"/var/lib/suit": ("dir", 0, 0o755)})
+
+    def test_state_directory_owned_by_user_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self.check(**{"/var/lib/suit": ("dir", 1000, 0o700)})
+
+    def test_database_readable_by_others_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self.check(**{"/var/lib/suit/state.db": ("file", 0, 0o644)})
+
+    def test_symlinked_database_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self.check(**{"/var/lib/suit/state.db": ("link", 0, 0o777)})
+
+    def test_foreign_wal_file_is_refused(self):
+        with self.assertRaises(policy.PolicyError):
+            self.check(**{"/var/lib/suit/state.db-wal": ("file", 1000, 0o600)})

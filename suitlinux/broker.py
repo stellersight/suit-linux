@@ -124,6 +124,7 @@ def main(argv=None) -> int:  # pragma: no cover - exercised through tests of its
         uid = caller_uid()
         verify_own_installation()
         actions, eligibility, _ = policy.load()
+        policy.check_state_path(str(DEFAULT_DB))
         store = Store(DEFAULT_DB)
         action = authorize(argv[0], uid, store, actions, eligibility, clock.boot_id(), clock.boot_seconds())
         store.close()
