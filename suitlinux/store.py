@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """Authoritative local state: requests, grants, risk state and the audit chain.
 
 Everything lives in one SQLite database so that a state change and the audit

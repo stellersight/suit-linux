@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """Generates the suit.audit.v1 shared test vectors.
 
 Run once when the specification changes; the output is committed and then

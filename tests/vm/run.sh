@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 # Drives the VM: boot, install SUIT and issue a grant (phase 1), reboot the
 # guest kernel, then check the grant is dead (phase 2).
 set -eu

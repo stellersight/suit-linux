@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """suit.audit.v1: canonical encoding and chain hashing.
 
 This module and the PHP class Drupal\\suit\\Audit\\AuditV1 implement the same

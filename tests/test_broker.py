@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """Tests for the suit-linux broker, policy and state store.
 
 These exercise the decision logic on any platform. They do not exercise

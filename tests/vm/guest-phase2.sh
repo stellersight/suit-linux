@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 # Phase 2, inside the VM after a real reboot: the grant issued during boot A
 # must not authorize anything during boot B, even though its 60-minute
 # window has not elapsed by any clock, and even if the wall clock is moved.

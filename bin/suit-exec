@@ -1,4 +1,6 @@
 #!/usr/bin/python3 -I
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 import sys
 sys.path.insert(0, "/usr/lib/suit")
 from suitlinux.broker import main

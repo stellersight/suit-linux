@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """Root-owned policy: which actions exist, and who may request them.
 
 Two files, both under /etc/suit:

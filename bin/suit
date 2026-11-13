@@ -1,4 +1,6 @@
 #!/usr/bin/python3 -I
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 # -I: ignore PYTHON* environment variables and the user site directory, so a
 # caller cannot steer which code this root process imports.
 import sys

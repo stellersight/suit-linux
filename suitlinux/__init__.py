@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """SUIT for Linux: just-in-time privileged operations through a local broker.
 
 The trust boundary is deliberately small. A user never receives a sudo rule

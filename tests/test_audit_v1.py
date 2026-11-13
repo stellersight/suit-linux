@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """suit.audit.v1 conformance against the shared vectors.
 
 The same vectors file is copied into the Drupal module's tests, where an

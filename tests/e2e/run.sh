@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 # SUIT for Linux end-to-end checks. Runs as root inside a disposable
 # container, acting as alice (eligible requester, uid 1001) and bob
 # (approver, uid 2000). POSIX sh, so it runs on Debian, Rocky and Alpine.

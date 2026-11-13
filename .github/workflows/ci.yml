@@ -22,6 +22,22 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m unittest discover -s tests -v
 
+  coverage:
+    name: Coverage (statement and branch)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install coverage==7.6.1
+      - run: coverage run --branch --source=suitlinux -m unittest discover -s tests
+      - run: coverage report | tee coverage.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.txt
+
   e2e:
     name: End to end (${{ matrix.base }})
     runs-on: ubuntu-24.04

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """suit: request, approve, deny, revoke, suspend, status and verify.
 
 Run through sudo; the caller's identity comes from sudo, never from flags.

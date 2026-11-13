@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 # Phase 1, inside the VM before reboot: install SUIT as the e2e image does,
 # issue an approved grant, prove it works, and record the boot ID.
 set -eu

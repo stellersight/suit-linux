@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 StellerSight Private Limited
 """suit-exec: the privileged reference monitor.
 
 Installed root-owned and reached through one static sudoers rule:
