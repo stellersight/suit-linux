@@ -48,10 +48,10 @@ Expiry needs no cleanup job. The next call after the deadline, after revocation 
 
 ### From the StellerSight package repository
 
-Signed packages for apt (Debian, Ubuntu), dnf/yum (RHEL, Rocky, AlmaLinux, Oracle Linux, Fedora, Amazon Linux 2023), zypper (openSUSE Tumbleweed), apk (Alpine) and pacman (Arch) are at <https://stellersight.github.io/packages/>, with the signing-key fingerprint. For example, on RHEL and its rebuilds:
+Signed packages for apt (Debian, Ubuntu), dnf/yum (RHEL, Rocky, AlmaLinux, Oracle Linux, Fedora, Amazon Linux 2023), zypper (openSUSE Tumbleweed), apk (Alpine) and pacman (Arch) are at <https://packages.stellersight.com/>, with the signing-key fingerprint. For example, on RHEL and its rebuilds:
 
 ```bash
-sudo curl -fsSL https://stellersight.github.io/packages/rpm/stellersight.repo -o /etc/yum.repos.d/stellersight.repo
+sudo curl -fsSL https://packages.stellersight.com/rpm/stellersight.repo -o /etc/yum.repos.d/stellersight.repo
 sudo dnf install suit-linux
 ```
 
