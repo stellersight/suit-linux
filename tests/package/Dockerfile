@@ -1,4 +1,4 @@
-# Installs the built .deb or .rpm, then runs the end-to-end suite against the
+# Installs every built .deb or .rpm in dist/ (SUIT for Linux, and Priv-Audit if present), then runs the end-to-end suite against the
 # packaged installation. From a directory holding dist/ and this repository:
 #   docker build --build-arg BASE=debian:12-slim -f tests/package/Dockerfile -t suit-pkg .
 ARG BASE=debian:12-slim
@@ -6,9 +6,9 @@ FROM ${BASE}
 COPY dist/ /tmp/dist/
 RUN set -e; \
     if command -v apt-get >/dev/null; then \
-      apt-get update && apt-get install -y --no-install-recommends /tmp/dist/suit-linux_*.deb /tmp/dist/priv-audit_*.deb passwd && rm -rf /var/lib/apt/lists/*; \
+      apt-get update && apt-get install -y --no-install-recommends /tmp/dist/*.deb passwd && rm -rf /var/lib/apt/lists/*; \
     else \
-      dnf install -y /tmp/dist/suit-linux-*.rpm /tmp/dist/priv-audit-*.rpm shadow-utils util-linux findutils && dnf clean all; \
+      dnf install -y /tmp/dist/*.rpm shadow-utils util-linux findutils && dnf clean all; \
     fi
 COPY tests/e2e/profiles.json tests/e2e/eligibility.json /etc/suit/
 COPY tests/e2e/run.sh /root/run.sh

@@ -45,3 +45,22 @@ jobs:
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
       - run: docker build -f tests/vm/Dockerfile -t suit-vm .
       - run: docker run --rm --device /dev/kvm suit-vm
+
+  package:
+    name: Package and install (${{ matrix.base }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        base: ['debian:12-slim', 'ubuntu:24.04', 'rockylinux:9', 'fedora:41']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build .deb and .rpm with nfpm
+        run: |
+          mkdir -p dist
+          for p in deb rpm; do
+            docker run --rm -v "$PWD:/w" -w /w -e VERSION=0.2.0 -e PRERELEASE=beta1 -e APK_KEY_FILE= \
+              goreleaser/nfpm:v2.41.1 package -f packaging/nfpm-suit.yaml -p $p -t dist/
+          done
+      - run: docker build --build-arg BASE=${{ matrix.base }} -f tests/package/Dockerfile -t suit-pkg .
+      - run: docker run --rm suit-pkg | tee pkg.log && grep -q ', 0 failed' pkg.log
