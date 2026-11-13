@@ -49,9 +49,9 @@ Expiry needs no cleanup job. The next call after the deadline, after revocation 
 Run as root. The broker and policy must be root-owned and not writable by anyone else; the broker refuses policy that is not.
 
 ```bash
-install -d -m 0755 -o root -g root /opt/suit /etc/suit
-cp -r suitlinux /opt/suit/ && chown -R root:root /opt/suit && chmod -R go-w /opt/suit
-install -m 0755 -o root -g root bin/suit bin/suit-exec /usr/local/sbin/
+install -d -m 0755 -o root -g root /usr/lib/suit /etc/suit
+cp -r suitlinux /usr/lib/suit/ && chown -R root:root /usr/lib/suit && chmod -R go-w /usr/lib/suit
+install -m 0755 -o root -g root bin/suit bin/suit-exec /usr/sbin/
 install -m 0644 -o root -g root etc/profiles.example.json /etc/suit/profiles.json
 install -m 0644 -o root -g root etc/eligibility.example.json /etc/suit/eligibility.json
 install -d -m 0700 -o root -g root /var/lib/suit

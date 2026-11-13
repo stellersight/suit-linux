@@ -2,7 +2,7 @@
 
 Installed root-owned and reached through one static sudoers rule:
 
-    %suit-eligible ALL=(root) NOPASSWD: /usr/local/sbin/suit-exec
+    %suit-eligible ALL=(root) NOPASSWD: /usr/sbin/suit-exec
 
 The rule confers nothing on its own. On every invocation the broker:
 

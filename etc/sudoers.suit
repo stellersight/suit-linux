@@ -2,7 +2,7 @@
 # The broker refuses unless an approved, unexpired grant exists, so this
 # rule confers nothing on its own. Users must hold no other sudo rights;
 # check with `suit doctor`, run as root.
-Defaults!/usr/local/sbin/suit-exec env_reset
-Defaults!/usr/local/sbin/suit env_reset
-%suit-eligible  ALL=(root) NOPASSWD: /usr/local/sbin/suit-exec, /usr/local/sbin/suit request *, /usr/local/sbin/suit revoke *, /usr/local/sbin/suit status
-%suit-approvers ALL=(root) /usr/local/sbin/suit approve *, /usr/local/sbin/suit deny *, /usr/local/sbin/suit revoke *, /usr/local/sbin/suit suspend *, /usr/local/sbin/suit status, /usr/local/sbin/suit verify
+Defaults!/usr/sbin/suit-exec env_reset
+Defaults!/usr/sbin/suit env_reset
+%suit-eligible  ALL=(root) NOPASSWD: /usr/sbin/suit-exec, /usr/sbin/suit request *, /usr/sbin/suit revoke *, /usr/sbin/suit status
+%suit-approvers ALL=(root) /usr/sbin/suit approve *, /usr/sbin/suit deny *, /usr/sbin/suit revoke *, /usr/sbin/suit suspend *, /usr/sbin/suit status, /usr/sbin/suit verify
