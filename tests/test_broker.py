@@ -219,7 +219,7 @@ class TestBypassDetection(unittest.TestCase):
     env_reset
 
 User alice may run the following commands on host:
-    (root) NOPASSWD: /usr/sbin/suit-exec
+    (root) NOPASSWD: /usr/bin/suit-exec
     (ALL : ALL) ALL
 """
 

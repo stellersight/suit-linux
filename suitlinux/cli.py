@@ -23,7 +23,7 @@ from suitlinux import clock, policy
 from suitlinux.broker import Denied, caller_uid, verify_own_installation
 from suitlinux.store import DEFAULT_DB, RISK_NORMAL, RISK_SUSPENDED, Store, StoreError
 
-BROKER_PATH = "/usr/sbin/suit-exec"
+BROKER_PATH = "/usr/bin/suit-exec"
 
 
 def _boot_or_none():
@@ -131,7 +131,7 @@ def sudo_rules_beyond_broker(listing: str) -> List[str]:
         commands = stripped.split(")", 1)[1].strip()
         for tag in ("NOPASSWD:", "PASSWD:", "SETENV:", "NOSETENV:"):
             commands = commands.replace(tag, "")
-        if not all(c.strip() in (BROKER_PATH, "/usr/sbin/suit") or c.strip().startswith("/usr/sbin/suit ")
+        if not all(c.strip() in (BROKER_PATH, "/usr/bin/suit") or c.strip().startswith("/usr/bin/suit ")
                    for c in commands.split(",")):
             findings.append(stripped)
     return findings

@@ -24,6 +24,7 @@ overrides:
     depends:
       - python3 >= 3.8
       - sudo
+      - (shadow-utils or shadow)
   apk:
     depends:
       - python3>=3.8
@@ -61,10 +62,10 @@ contents:
     dst: /usr/lib/suit/suitlinux/store.py
     file_info: {mode: 0644, owner: root, group: root}
   - src: bin/suit
-    dst: /usr/sbin/suit
+    dst: /usr/bin/suit
     file_info: {mode: 0755, owner: root, group: root}
   - src: bin/suit-exec
-    dst: /usr/sbin/suit-exec
+    dst: /usr/bin/suit-exec
     file_info: {mode: 0755, owner: root, group: root}
   - src: etc/sudoers.suit
     dst: /etc/sudoers.d/suit
