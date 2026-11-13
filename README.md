@@ -2,7 +2,7 @@
 
 Just-in-time privileged operations for Linux hosts, through a small local broker.
 
-**Status: experimental pre-release (0.2.0.dev0).** A just-in-time broker for privileged commands, not a complete Linux identity or privileged-access platform. The decision logic has unit tests. The full lifecycle is verified end to end on Debian 12, Rocky Linux 9.3 and Alpine 3.20 in containers, with real sudo, real users and the kernel's `CLOCK_BOOTTIME` (`tests/e2e`). Behaviour across a real reboot is verified on Debian 12 in a QEMU virtual machine: a grant issued before the reboot is refused and recorded as expired after it, also with the wall clock moved back (`tests/vm`). Not yet verified: reboot on other distributions, and systemd-managed services as targets. Not implemented: separation of duties and access reviews.
+**Status: experimental pre-release (0.2.0 beta 1).** A just-in-time broker for privileged commands, not a complete Linux identity or privileged-access platform. The decision logic has unit tests. The full lifecycle is verified end to end on Debian 12, Rocky Linux 9.3 and Alpine 3.20 in containers, with real sudo, real users and the kernel's `CLOCK_BOOTTIME` (`tests/e2e`). Behaviour across a real reboot is verified on Debian 12 in a QEMU virtual machine: a grant issued before the reboot is refused and recorded as expired after it, also with the wall clock moved back (`tests/vm`). Not yet verified: reboot on other distributions, and systemd-managed services as targets. Not implemented: separation of duties and access reviews.
 
 Part of SUIT, StellerSight's access-governance project. The [Drupal module](https://www.drupal.org/project/suit) applies the same model inside Drupal.
 

@@ -6,4 +6,4 @@ runs one exact, root-owned command line on their behalf only while an
 independently approved, unexpired, unrevoked grant exists.
 """
 
-__version__ = "0.2.0.dev0"
+__version__ = "0.2.0b1"
