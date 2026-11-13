@@ -24,6 +24,20 @@ overrides:
     depends:
       - python3 >= 3.8
       - sudo
+  apk:
+    depends:
+      - python3>=3.8
+      - sudo
+  archlinux:
+    depends:
+      - python>=3.8
+      - sudo
+apk:
+  signature:
+    key_file: ${APK_KEY_FILE}
+    key_name: stellersight.rsa.pub
+archlinux:
+  packager: StellerSight Private Limited <security@stellersight.com>
 contents:
   - src: suitlinux/__init__.py
     dst: /usr/lib/suit/suitlinux/__init__.py

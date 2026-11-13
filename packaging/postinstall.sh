@@ -1,8 +1,12 @@
 #!/bin/sh
 # Runs as root after the package's files are in place.
 set -e
-getent group suit-eligible >/dev/null || groupadd -r suit-eligible
-getent group suit-approvers >/dev/null || groupadd -r suit-approvers
+add_group() {
+    getent group "$1" >/dev/null && return 0
+    if command -v groupadd >/dev/null; then groupadd -r "$1"; else addgroup -S "$1"; fi
+}
+add_group suit-eligible
+add_group suit-approvers
 install -d -m 0700 -o root -g root /var/lib/suit
 # A sudoers drop-in with a syntax error breaks sudo for everyone: check it,
 # and remove it rather than leave sudo unusable.
